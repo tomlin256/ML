@@ -34,8 +34,8 @@ class Agent(object):
     def build_policy_network(self):
         state_input = Input(shape=(self.obs_space_size,), name='state')
         advantages_input = Input(shape=(1,), name='advantages')
-        d1 = Dense(16, activation=K.relu)(state_input)
-        d2 = Dense(16, activation=K.relu)(d1)
+        d1 = Dense(64, activation=K.relu)(state_input)
+        d2 = Dense(64, activation=K.relu)(d1)
         probs = Dense(self.action_space_size, activation=K.softmax)(d2)
 
         def _loss(y_true, y_pred):
