@@ -7,6 +7,7 @@ from keras.optimizers import Adam
 
 
 class Agent(object):
+    """ first agent """
 
     def __init__(self,
                  env,
