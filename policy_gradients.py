@@ -20,7 +20,7 @@ class Agent(object):
         self.env = env
 
         self.obs_space_size = self.env.observation_space.shape[0]
-        if self.env.continuous:
+        if getattr( self.env, 'continuous', False ):
             raise NotImplementedError("continuous env not supported")
         self.action_space_size = self.env.action_space.n
         self.action_space = list(range(self.action_space_size))
@@ -30,14 +30,21 @@ class Agent(object):
 
         self.memory = []
 
-        self.policy, self.predict = self.build_policy_network()
+        self.policy = self.build_policy_network()
+        self.predict = self.build_predict_network(self.policy.get_weights())
 
-    def build_policy_network(self):
+    def _build_network_layers(self):
         state_input = Input(shape=(self.obs_space_size,), name='state')
-        advantages_input = Input(shape=(1,), name='advantages')
         d1 = Dense(64, activation=K.relu)(state_input)
         d2 = Dense(64, activation=K.relu)(d1)
         probs = Dense(self.action_space_size, activation=K.softmax)(d2)
+        return state_input, probs
+
+    def build_policy_network(self):
+
+        state_input, probs = self._build_network_layers()
+
+        advantages_input = Input(shape=(1,), name='advantages')
 
         def _loss(y_true, y_pred):
             # y_true = ground truth values
@@ -48,10 +55,14 @@ class Agent(object):
 
         policy = Model(input=[state_input, advantages_input], output=[probs])
         policy.compile(optimizer=Adam(lr=self.learning_rate), loss=_loss)
+        return policy
 
+    def build_predict_network(self, weights=None):
+        state_input, probs = self._build_network_layers()
         predict = Model(input=[state_input], output=[probs])
-        
-        return policy, predict
+        if weights:
+            predict.set_weights(weights)
+        return predict
 
     def choose_action(self, observation):
         state = observation[np.newaxis, :]
@@ -64,13 +75,14 @@ class Agent(object):
 
     def forget(self):
         self.memory = []
+        self.predict = self.build_predict_network(self.policy.get_weights())
 
     def train(self):
 
-        def _from_memory(i, dtype=np.object):
+        def _from_memory(i, dtype):
             return np.array([x[i] for x in self.memory], dtype=dtype)
 
-        state_memory = _from_memory(0)
+        state_memory = _from_memory(0, np.float)
         action_memory = _from_memory(1, np.int)
         reward_memory = _from_memory(2, np.float)
 
@@ -109,7 +121,7 @@ class Agent(object):
 
 def main():
 
-    env = gym.make("LunarLander-v2")
+    env = gym.make("CartPole-v0")
     agent = Agent(env)
 
     score_history = []
