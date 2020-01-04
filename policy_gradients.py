@@ -21,13 +21,13 @@ class Agent(object):
         self.env = env
 
         self.obs_space_size = self.env.observation_space.shape[0]
-        if getattr( self.env, 'continuous', False ):
+        if getattr(self.env, 'continuous', False):
             raise NotImplementedError("continuous env not supported")
         self.action_space_size = self.env.action_space.n
         self.action_space = list(range(self.action_space_size))
 
-        self.learning_rate = learning_rate # alpha
-        self.discount = discount # gamma
+        self.learning_rate = learning_rate  # alpha
+        self.discount = discount  # gamma
 
         self.memory = []
 
@@ -50,13 +50,14 @@ class Agent(object):
         def _loss(y_true, y_pred):
             # y_true = ground truth values
             # y_pred = predicted values
-            out = K.clip(y_pred, 1e-8, 1-1e-8) # keep in range for a proba 0.>p<1.
+            out = K.clip(y_pred, 1e-8, 1-1e-8)
             log_lik = y_true * K.log(out)
             return -log_lik*advantages_input
 
         policy = Model(input=[state_input, advantages_input], output=[probs])
         policy.compile(optimizer=Adam(lr=self.learning_rate),
-                       loss=LossFunctionWrapper(_loss, name="A-weighted-log-loss"))
+                       loss=LossFunctionWrapper(_loss,
+                                                name="A-weighted-log-loss"))
         return policy
 
     def build_predict_network(self, weights=None):
@@ -150,9 +151,11 @@ def main():
         agent.train()
         agent.forget()
 
-        print(f"episode {episode}, score {score}, average_score {np.mean(score_history[-100:])}")
+        print(f"episode {episode}, score {score}, average_score "
+              f"{np.mean(score_history[-100:])}")
 
     agent.save_model()
+
 
 if __name__ == "__main__":
     main()
