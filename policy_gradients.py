@@ -4,6 +4,7 @@ import numpy as np
 from keras.layers import Dense, Input
 from keras.models import Model, load_model
 from keras.optimizers import Adam
+from keras.losses import LossFunctionWrapper
 
 
 class Agent(object):
@@ -51,10 +52,11 @@ class Agent(object):
             # y_pred = predicted values
             out = K.clip(y_pred, 1e-8, 1-1e-8) # keep in range for a proba 0.>p<1.
             log_lik = y_true * K.log(out)
-            return K.sum(-log_lik*advantages_input)
+            return -log_lik*advantages_input
 
         policy = Model(input=[state_input, advantages_input], output=[probs])
-        policy.compile(optimizer=Adam(lr=self.learning_rate), loss=_loss)
+        policy.compile(optimizer=Adam(lr=self.learning_rate),
+                       loss=LossFunctionWrapper(_loss, name="A-weighted-log-loss"))
         return policy
 
     def build_predict_network(self, weights=None):
